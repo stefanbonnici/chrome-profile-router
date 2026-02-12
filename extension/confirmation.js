@@ -12,6 +12,18 @@ const cancelBtn = document.getElementById("cancel");
 const settingsLink = document.getElementById("settings-link");
 const errorEl = document.getElementById("error");
 
+// Chrome profile avatar colors
+const PROFILE_COLORS = [
+  "#1a73e8", "#188038", "#a142f4", "#e8710a",
+  "#d93025", "#129eaf", "#ee675c", "#9334e6",
+];
+
+function getInitials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.substring(0, 1).toUpperCase() || "?";
+}
+
 function showError(msg) {
   errorEl.textContent = msg;
   errorEl.style.display = "block";
@@ -83,9 +95,11 @@ chrome.runtime.sendMessage({ type: "getProfiles" }, (profiles) => {
   profiles.forEach((profile, index) => {
     const btn = document.createElement("button");
     btn.className = "profile-btn";
+    const color = PROFILE_COLORS[index % PROFILE_COLORS.length];
     btn.innerHTML = `
-      <span class="shortcut">${index + 1}</span>
+      <div class="profile-avatar" style="background-color: ${color}">${escapeHtml(getInitials(profile.name))}</div>
       <span class="profile-name">${escapeHtml(profile.name)}</span>
+      <span class="shortcut">${index + 1}</span>
     `;
     btn.addEventListener("click", () => selectProfile(profile.directory));
     profilesContainer.appendChild(btn);
