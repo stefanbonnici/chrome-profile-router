@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Router</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Open in Profile</h1>
+
+    <div id="error" class="error-message" style="display: none;"></div>
+
+    <div class="url-display">
+      <img id="favicon" class="favicon" src="" alt="" style="display: none;">
+      <span id="url-text"></span>
+    </div>
+
+    <div class="profiles-label">Choose a profile</div>
+    <div id="profiles" class="profiles-grid">
+      <div class="status-message">Loading profiles...</div>
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="remember" />
+      <label for="remember">Remember for this domain</label>
+    </div>
+
+    <div class="actions">
+      <button id="cancel" class="btn-cancel">Cancel</button>
+      <a id="settings-link" class="settings-link" href="#">Settings</a>
+    </div>
+  </div>
+
+  <script src="confirmation.js"></script>
+</body>
+</html>

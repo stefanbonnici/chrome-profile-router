@@ -1,0 +1,9 @@
+{
+  "name": "com.profile_router.host",
+  "description": "Chrome Profile Router - opens URLs in specific Chrome profiles",
+  "path": "__PATH__",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://__EXTENSION_ID__/"
+  ]
+}
