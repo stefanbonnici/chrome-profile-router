@@ -9,58 +9,79 @@ function escapeHtml(str) {
 }
 
 function loadMappings() {
-  chrome.runtime.sendMessage({ type: "getDomainMappings" }, (mappings) => {
-    const entries = Object.entries(mappings || {});
+  chrome.runtime.sendMessage({ type: "getDomainMappings" }, (domainMappings) => {
+    chrome.runtime.sendMessage({ type: "getUrlMappings" }, (urlMappings) => {
+      const domainEntries = Object.entries(domainMappings || {}).map(([key, profile]) => ({
+        key,
+        profile,
+        type: "domain",
+        display: key,
+      }));
 
-    if (entries.length === 0) {
-      mappingsContainer.innerHTML = '<div class="empty-state">No saved domain mappings yet.</div>';
-      actionsEl.style.display = "none";
-      return;
-    }
+      const urlEntries = Object.entries(urlMappings || {}).map(([key, profile]) => ({
+        key,
+        profile,
+        type: "url",
+        display: key,
+      }));
 
-    // Resolve profile names
-    chrome.runtime.sendMessage({ type: "getProfiles" }, (profiles) => {
-      const profileMap = {};
-      if (profiles && !profiles.error) {
-        profiles.forEach((p) => { profileMap[p.directory] = p.name; });
+      const allEntries = [...domainEntries, ...urlEntries];
+
+      if (allEntries.length === 0) {
+        mappingsContainer.innerHTML = '<div class="empty-state">No saved mappings yet.</div>';
+        actionsEl.style.display = "none";
+        return;
       }
 
-      mappingsContainer.innerHTML = "";
-      entries.sort(([a], [b]) => a.localeCompare(b));
+      // Resolve profile names
+      chrome.runtime.sendMessage({ type: "getProfiles" }, (profiles) => {
+        const profileMap = {};
+        if (profiles && !profiles.error) {
+          profiles.forEach((p) => { profileMap[p.directory] = p.name; });
+        }
 
-      for (const [domain, profileDir] of entries) {
-        const profileName = profileMap[profileDir] || profileDir;
+        mappingsContainer.innerHTML = "";
+        allEntries.sort((a, b) => a.display.localeCompare(b.display));
 
-        const item = document.createElement("div");
-        item.className = "mapping-item";
-        item.innerHTML = `
-          <div class="mapping-info">
-            <span class="mapping-domain">${escapeHtml(domain)}</span>
-            <span class="mapping-profile">${escapeHtml(profileName)}</span>
-          </div>
-        `;
+        for (const entry of allEntries) {
+          const profileName = profileMap[entry.profile] || entry.profile;
 
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "btn-delete";
-        deleteBtn.textContent = "Remove";
-        deleteBtn.addEventListener("click", () => {
-          chrome.runtime.sendMessage(
-            { type: "removeDomainMapping", domain: domain },
-            () => loadMappings()
-          );
-        });
+          const item = document.createElement("div");
+          item.className = "mapping-item";
+          item.innerHTML = `
+            <div class="mapping-info">
+              <div class="mapping-header">
+                <span class="mapping-type mapping-type-${entry.type}">${entry.type === "domain" ? "Domain" : "URL"}</span>
+                <span class="mapping-domain">${escapeHtml(entry.display)}</span>
+              </div>
+              <span class="mapping-profile">${escapeHtml(profileName)}</span>
+            </div>
+          `;
 
-        item.appendChild(deleteBtn);
-        mappingsContainer.appendChild(item);
-      }
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn-delete";
+          deleteBtn.textContent = "Remove";
+          deleteBtn.addEventListener("click", () => {
+            const msgType = entry.type === "domain" ? "removeDomainMapping" : "removeUrlMapping";
+            const msgKey = entry.type === "domain" ? "domain" : "urlPath";
+            chrome.runtime.sendMessage(
+              { type: msgType, [msgKey]: entry.key },
+              () => loadMappings()
+            );
+          });
 
-      actionsEl.style.display = "flex";
+          item.appendChild(deleteBtn);
+          mappingsContainer.appendChild(item);
+        }
+
+        actionsEl.style.display = "flex";
+      });
     });
   });
 }
 
 clearAllBtn.addEventListener("click", () => {
-  if (confirm("Remove all saved domain mappings?")) {
+  if (confirm("Remove all saved mappings?")) {
     chrome.runtime.sendMessage({ type: "clearAllMappings" }, () => loadMappings());
   }
 });

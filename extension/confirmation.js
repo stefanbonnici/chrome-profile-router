@@ -5,6 +5,9 @@ const urlText = document.getElementById("url-text");
 const favicon = document.getElementById("favicon");
 const profilesContainer = document.getElementById("profiles");
 const rememberCheckbox = document.getElementById("remember");
+const rememberOptions = document.getElementById("remember-options");
+const urlPathInput = document.getElementById("url-path");
+const urlPathContainer = document.getElementById("url-path-container");
 const cancelBtn = document.getElementById("cancel");
 const settingsLink = document.getElementById("settings-link");
 const errorEl = document.getElementById("error");
@@ -22,20 +25,50 @@ function getDomain(url) {
   }
 }
 
+function getUrlPath(url) {
+  try {
+    const u = new URL(url);
+    let path = u.hostname + u.pathname;
+    if (path.endsWith("/")) path = path.slice(0, -1);
+    return path;
+  } catch {
+    return null;
+  }
+}
+
 // Display the target URL
 if (targetUrl) {
   urlText.textContent = targetUrl;
 
-  // Show favicon
   const domain = getDomain(targetUrl);
   if (domain) {
     favicon.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
     favicon.style.display = "block";
     favicon.onerror = () => { favicon.style.display = "none"; };
+
+    // Set domain display in remember options
+    document.getElementById("remember-domain").textContent = domain;
+  }
+
+  // Pre-populate URL path
+  const urlPath = getUrlPath(targetUrl);
+  if (urlPath) {
+    urlPathInput.value = urlPath;
   }
 } else {
   urlText.textContent = "No URL provided";
 }
+
+// Remember options toggle
+rememberCheckbox.addEventListener("change", () => {
+  rememberOptions.style.display = rememberCheckbox.checked ? "block" : "none";
+});
+
+document.querySelectorAll('input[name="remember-type"]').forEach(radio => {
+  radio.addEventListener("change", () => {
+    urlPathContainer.style.display = radio.value === "url" && radio.checked ? "block" : "none";
+  });
+});
 
 // Load profiles
 chrome.runtime.sendMessage({ type: "getProfiles" }, (profiles) => {
@@ -57,6 +90,23 @@ chrome.runtime.sendMessage({ type: "getProfiles" }, (profiles) => {
     btn.addEventListener("click", () => selectProfile(profile.directory));
     profilesContainer.appendChild(btn);
   });
+
+  // Detect current profile and add badge
+  chrome.runtime.sendMessage({ type: "getCurrentProfile" }, (currentDir) => {
+    if (!currentDir) return;
+    profiles.forEach((profile, index) => {
+      if (profile.directory === currentDir) {
+        const buttons = profilesContainer.querySelectorAll(".profile-btn");
+        if (buttons[index]) {
+          buttons[index].classList.add("current-profile");
+          const badge = document.createElement("span");
+          badge.className = "current-badge";
+          badge.textContent = "Current";
+          buttons[index].appendChild(badge);
+        }
+      }
+    });
+  });
 });
 
 async function selectProfile(profileDirectory) {
@@ -64,13 +114,26 @@ async function selectProfile(profileDirectory) {
 
   const domain = getDomain(targetUrl);
 
-  // Save domain mapping if checkbox is checked
-  if (rememberCheckbox.checked && domain) {
-    chrome.runtime.sendMessage({
-      type: "saveDomainMapping",
-      domain: domain,
-      profile: profileDirectory,
-    });
+  // Save mapping if remember is checked
+  if (rememberCheckbox.checked) {
+    const rememberType = document.querySelector('input[name="remember-type"]:checked').value;
+
+    if (rememberType === "url") {
+      const urlPath = urlPathInput.value.trim();
+      if (urlPath) {
+        chrome.runtime.sendMessage({
+          type: "saveUrlMapping",
+          urlPath: urlPath,
+          profile: profileDirectory,
+        });
+      }
+    } else if (domain) {
+      chrome.runtime.sendMessage({
+        type: "saveDomainMapping",
+        domain: domain,
+        profile: profileDirectory,
+      });
+    }
   }
 
   // Open URL in selected profile

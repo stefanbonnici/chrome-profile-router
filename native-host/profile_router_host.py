@@ -55,6 +55,8 @@ def list_profiles():
         profiles.append({
             "directory": directory,
             "name": info.get("name", directory),
+            "gaia_id": info.get("gaia_id", ""),
+            "user_name": info.get("user_name", ""),
         })
 
     profiles.sort(key=lambda p: p["directory"])

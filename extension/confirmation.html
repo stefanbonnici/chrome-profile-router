@@ -22,9 +22,24 @@
       <div class="status-message">Loading profiles...</div>
     </div>
 
-    <div class="checkbox-row">
-      <input type="checkbox" id="remember" />
-      <label for="remember">Remember for this domain</label>
+    <div class="remember-section">
+      <div class="checkbox-row">
+        <input type="checkbox" id="remember" />
+        <label for="remember">Remember this choice</label>
+      </div>
+      <div id="remember-options" class="remember-options" style="display: none;">
+        <label class="radio-option">
+          <input type="radio" name="remember-type" value="domain" checked />
+          <span>For this domain (<span id="remember-domain"></span>)</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="remember-type" value="url" />
+          <span>For this URL path</span>
+        </label>
+        <div id="url-path-container" class="url-path-input" style="display: none;">
+          <input type="text" id="url-path" />
+        </div>
+      </div>
     </div>
 
     <div class="actions">
