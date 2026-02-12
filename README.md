@@ -25,20 +25,20 @@ A Chrome extension + native messaging host for macOS that intercepts links opene
    cd chrome-profile-router
    ```
 
-2. **Load the extension** in Chrome:
+2. **Load the extension in every Chrome profile.** External links can land in whichever profile was last active, so the extension must be present in all of them. For each profile:
+   - Switch to that profile in Chrome
    - Open `chrome://extensions`
    - Enable **Developer mode** (toggle in top right)
-   - Click **Load unpacked**
-   - Select the `extension/` folder from this repo
-   - Copy the **extension ID** shown under the extension name
+   - Click **Load unpacked** and select the `extension/` folder from this repo
+   - Note the **extension ID** shown under the extension name (each profile gets its own ID)
 
-3. **Install the native messaging host:**
+3. **Install the native messaging host** with all the extension IDs:
 
    ```bash
-   ./install.sh <extension-id>
+   ./install.sh <id-from-profile1> <id-from-profile2> <id-from-profile3>
    ```
 
-   Or run `./install.sh` without arguments and paste the extension ID when prompted.
+   Or run `./install.sh` without arguments and enter each ID interactively.
 
 4. **Restart Chrome** to activate the native messaging connection.
 

@@ -18,23 +18,44 @@ echo "[OK] Made native host script executable"
 # Create the NativeMessagingHosts directory if it doesn't exist
 mkdir -p "$MANIFEST_DIR"
 
-# Get extension ID from argument or prompt
-EXTENSION_ID="${1:-}"
-if [ -z "$EXTENSION_ID" ]; then
+# Collect extension IDs from arguments or prompt
+EXTENSION_IDS=("$@")
+
+if [ ${#EXTENSION_IDS[@]} -eq 0 ]; then
     echo ""
-    echo "To complete installation, you need the extension ID."
-    echo "1. Open chrome://extensions"
-    echo "2. Enable 'Developer mode' (top right)"
-    echo "3. Click 'Load unpacked' and select: $SCRIPT_DIR/extension"
-    echo "4. Copy the extension ID shown under the extension name"
+    echo "The extension must be installed in EVERY Chrome profile."
+    echo "For each profile:"
+    echo "  1. Switch to that profile in Chrome"
+    echo "  2. Open chrome://extensions"
+    echo "  3. Enable 'Developer mode' (top right)"
+    echo "  4. Click 'Load unpacked' and select: $SCRIPT_DIR/extension"
+    echo "  5. Copy the extension ID shown under the extension name"
     echo ""
-    read -p "Enter extension ID: " EXTENSION_ID
+    echo "Enter each extension ID (one per line). Press Enter on a blank line when done:"
+
+    while true; do
+        read -p "  Extension ID: " EXT_ID
+        if [ -z "$EXT_ID" ]; then
+            break
+        fi
+        EXTENSION_IDS+=("$EXT_ID")
+    done
 fi
 
-if [ -z "$EXTENSION_ID" ]; then
-    echo "[ERROR] Extension ID is required"
+if [ ${#EXTENSION_IDS[@]} -eq 0 ]; then
+    echo "[ERROR] At least one extension ID is required"
     exit 1
 fi
+
+# Build allowed_origins array
+ORIGINS=""
+for i in "${!EXTENSION_IDS[@]}"; do
+    if [ "$i" -gt 0 ]; then
+        ORIGINS="$ORIGINS,"
+    fi
+    ORIGINS="$ORIGINS
+    \"chrome-extension://${EXTENSION_IDS[$i]}/\""
+done
 
 # Generate manifest with correct paths
 cat > "$MANIFEST_PATH" << EOF
@@ -43,21 +64,23 @@ cat > "$MANIFEST_PATH" << EOF
   "description": "Chrome Profile Router - opens URLs in specific Chrome profiles",
   "path": "$HOST_SCRIPT",
   "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://$EXTENSION_ID/"
+  "allowed_origins": [$ORIGINS
   ]
 }
 EOF
 
-echo "[OK] Installed native messaging host manifest to:"
-echo "     $MANIFEST_PATH"
+echo ""
+echo "[OK] Installed native messaging host manifest with ${#EXTENSION_IDS[@]} extension ID(s):"
+for EXT_ID in "${EXTENSION_IDS[@]}"; do
+    echo "     - $EXT_ID"
+done
+echo ""
+echo "     Manifest: $MANIFEST_PATH"
 echo ""
 echo "==================================="
 echo "Installation complete!"
 echo ""
-echo "If you haven't already:"
-echo "  1. Open chrome://extensions"
-echo "  2. Enable 'Developer mode'"
-echo "  3. Click 'Load unpacked' → select: $SCRIPT_DIR/extension"
+echo "Restart Chrome to activate the native messaging host."
 echo ""
-echo "Then restart Chrome to activate the native messaging host."
+echo "To add more profiles later, re-run this script with all extension IDs:"
+echo "  ./install.sh <id1> <id2> <id3> ..."
