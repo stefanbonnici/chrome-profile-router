@@ -63,7 +63,7 @@ Click the **Settings** link on the confirmation page (or navigate to the extensi
 
 ## How It Works
 
-1. The Chrome extension listens for new tabs created without an `openerTabId` — these are tabs opened by external apps
+1. The Chrome extension listens for `chrome.webNavigation.onCommitted` events with a `transitionType` of `start_page` — Chrome's signal for navigations that start a tab from outside the browser (Mail, Slack, terminal, etc.)
 2. When detected, the extension checks for a matching URL path prefix mapping first, then falls back to a domain mapping
 3. If a match is found: the link opens automatically in the saved profile (via the native host) and the tab closes
 4. If no match: the confirmation page appears with a list of available Chrome profiles
@@ -91,7 +91,7 @@ chrome-profile-router/
 ## Troubleshooting
 
 - **"Failed to load profiles"** — Run `install.sh` again and make sure you used the correct extension ID. Restart Chrome after installing.
-- **Links not being intercepted** — Make sure Chrome is set as your default browser. The extension only intercepts tabs without an `openerTabId`.
+- **Links not being intercepted** — Make sure Chrome is set as your default browser. The extension only intercepts navigations with `transitionType: "start_page"` (external-app launches); middle-clicks and in-Chrome link clicks are intentionally ignored.
 - **Native host errors** — Check Chrome's extension error log at `chrome://extensions` (click "Errors" on the extension card).
 - **Current profile not showing** — The "Current" badge requires the profile to be signed into a Google account. Profiles not signed in will not show the indicator.
 

@@ -200,42 +200,42 @@ async function updateBadge() {
 
 // --- External Navigation Detection ---
 
-chrome.tabs.onCreated.addListener(async (tab) => {
-  // Tabs created by external apps have no openerTabId and usually have a pendingUrl
-  if (tab.openerTabId !== undefined) return;
+// `start_page` is Chrome's transitionType for navigations that start a tab from
+// outside Chrome (e.g. `open <url>` from Mail/Slack). Filtering on it avoids
+// intercepting in-Chrome link clicks, middle-clicks, and address-bar typing.
+chrome.webNavigation.onCommitted.addListener(async (details) => {
+  if (details.frameId !== 0) return;
+  if (details.transitionType !== "start_page") return;
 
-  const url = tab.pendingUrl || tab.url;
-  if (!url || url === "chrome://newtab/" || url.startsWith("chrome://") || url.startsWith("chrome-extension://")) {
+  const url = details.url;
+  if (!url || !(url.startsWith("http://") || url.startsWith("https://"))) {
     return;
   }
 
-  // Check for route marker (double-prompt prevention)
   if (isMarkedUrl(url)) {
-    chrome.tabs.update(tab.id, { url: stripMarker(url) });
+    chrome.tabs.update(details.tabId, { url: stripMarker(url) });
     return;
   }
 
   const domain = getDomain(url);
   if (!domain) return;
 
-  // Check URL prefix and domain memory
   const matchedProfile = await findMatchingMapping(url);
   if (matchedProfile) {
     try {
       await openInProfile(url, matchedProfile);
     } catch (err) {
       console.error("Profile Router: failed to auto-route", err);
-      return; // Don't close tab if open failed
+      return;
     }
-    chrome.tabs.remove(tab.id);
+    chrome.tabs.remove(details.tabId);
     return;
   }
 
-  // Redirect to confirmation page
   const confirmUrl = chrome.runtime.getURL(
     `confirmation.html?url=${encodeURIComponent(url)}`
   );
-  chrome.tabs.update(tab.id, { url: confirmUrl });
+  chrome.tabs.update(details.tabId, { url: confirmUrl });
 });
 
 // --- Message Handling (from confirmation/settings pages) ---

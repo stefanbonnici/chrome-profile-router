@@ -9,7 +9,7 @@ Chrome extension (Manifest V3) + Python 3 native messaging host for macOS. Inter
 ## Architecture
 
 **Extension (`extension/`)** — Manifest V3 Chrome extension (unpacked, no build step):
-- `background.js` — Service worker. Detects external navigations via `chrome.tabs.onCreated` (tabs without `openerTabId`). Communicates with native host via `chrome.runtime.sendNativeMessage()`. Checks domain memory and either auto-routes or redirects to confirmation page.
+- `background.js` — Service worker. Detects external navigations via `chrome.webNavigation.onCommitted` filtered to `transitionType === "start_page"` (Chrome's signal for navigations that start a tab from outside Chrome). Communicates with native host via `chrome.runtime.sendNativeMessage()`. Checks domain memory and either auto-routes or redirects to confirmation page.
 - `confirmation.html/js` — Profile picker UI. Shows URL, profile buttons, "Remember for this domain" checkbox, cancel. Auto-closes after dispatching to native host.
 - `settings.html/js` — Manage saved domain→profile mappings stored in `chrome.storage.local`.
 - `styles.css` — Shared styles (dark mode preferred).
