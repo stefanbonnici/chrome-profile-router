@@ -1,99 +1,112 @@
 # Chrome Profile Router
 
-A Chrome extension + native messaging host for macOS that intercepts links opened from external apps (Mail, Slack, etc.) and lets you choose which Chrome profile to open them in.
+A tiny macOS app that asks which Chrome profile to use **before** a link from an external app (Mail, Slack, Notes, Terminal, …) opens.
+
+Profile Router registers itself as your default web browser. Every link you click outside Chrome arrives at Profile Router first, which shows a profile picker and then opens the link in the Chrome profile you choose. Because no Chrome profile touches the link until you pick one, it never shows up in the history, "Recently Closed" list, or cookies of the wrong profile.
+
+It's a single AppleScript app with no dependencies: everything it needs ships with macOS.
 
 ## Features
 
-- **Profile picker** — When a link is opened from an external app, a clean confirmation page lets you choose which Chrome profile to use
-- **Current profile indicator** — The profile picker highlights which profile you're currently in with a "Current" badge
-- **Smart routing** — Automatically prevents double-prompts when routing links to another profile
-- **Domain memory** — Remember your choice for an entire domain (e.g., all `slack.com` links → Work profile)
-- **URL path memory** — Remember your choice for specific URL paths with prefix matching (e.g., `github.com/org-a` → Work profile, while `github.com/personal` → Personal profile)
-- **Settings page** — View and manage all saved domain and URL path mappings, with type badges to distinguish them
-- **Keyboard shortcuts** — Press 1-9 to quickly select a profile, Escape to cancel
-- **Dark mode UI** — Modern, minimal interface
+- **Profile picker**: one button per Chrome profile, shown before any profile loads the link
+- **Keyboard shortcuts**: press 1–9 to pick a profile, Escape to cancel
+- **Complete isolation**: the link only reaches the profile you chose, with no history, recently closed tab, or cookie trail in any other profile
+- **Remember your choice**: the picker's dropdown can save a rule so future links skip the picker:
+  - **Always for `slack.com`**: every link on that domain goes to the chosen profile
+  - **Always for `github.com/org-a/…`**: only links under that path prefix (up to 3 levels deep are offered)
+- **Rule management**: open the app directly to see and remove saved rules
+- **Plain-text rules**: rules live in a readable JSON file you can edit by hand
 
 ## Requirements
 
-- macOS
+- macOS 13 (Ventura) or later
 - Google Chrome
-- Python 3 (included with macOS)
 
 ## Installation
 
-1. **Clone or download** this repository:
+```bash
+git clone https://github.com/stefanbonnici/chrome-profile-router.git
+cd chrome-profile-router
+./install.sh
+```
 
-   ```bash
-   git clone https://github.com/your-username/chrome-profile-router.git
-   cd chrome-profile-router
-   ```
+The installer compiles `Profile Router.app` into `~/Applications` and then opens it. Click **Set Default Browser…** and choose **Profile Router** under **Default web browser** in System Settings.
 
-2. **Load the extension in every Chrome profile.** External links can land in whichever profile was last active, so the extension must be present in all of them. For each profile:
-   - Switch to that profile in Chrome
-   - Open `chrome://extensions`
-   - Enable **Developer mode** (toggle in top right)
-   - Click **Load unpacked** and select the `extension/` folder from this repo
-   - Note the **extension ID** shown under the extension name (it's the same across all profiles when loaded from the same path)
+That's it. Click a link in any other app to see the picker.
 
-3. **Install the native messaging host** with your extension ID:
+> Chrome will probably show a "Chrome isn't your default browser" bar now and then. Dismiss it (or click the ✕); Chrome is still the browser that actually opens your pages.
 
-   ```bash
-   ./install.sh <extension-id>
-   ```
+### Updating
 
-   Or run `./install.sh` without arguments and enter the ID interactively.
+Pull the latest code and run `./install.sh` again. Saved rules are kept.
 
-4. **Restart Chrome** to activate the native messaging connection.
+### Uninstalling
+
+```bash
+./uninstall.sh           # keeps saved rules
+./uninstall.sh --purge   # also deletes saved rules
+```
+
+Then choose a new default web browser (e.g. Google Chrome) in System Settings. The uninstaller opens the right page.
 
 ## Usage
 
-1. Click a link in any external app (Mail, Slack, Notes, etc.)
-2. Chrome opens and the Profile Router confirmation page appears
-3. The current profile is highlighted with a **"Current"** badge
-4. Click a profile (or press its number key) to open the link in that profile
-5. Optionally check **"Remember this choice"** to auto-route future links:
-   - **For this domain** — all links from the domain go to the chosen profile
-   - **For this URL path** — only links matching the URL path prefix are auto-routed (you can edit the path to make it more or less specific)
+1. Click a link in any app outside Chrome.
+2. The picker appears, showing the link.
+3. Click a profile or press its number (1–9). Press Escape to cancel; the link then goes nowhere.
+4. Optionally choose an **Always for …** option in the dropdown first to remember the choice.
 
-When a link is routed to another profile, the extension automatically prevents the target profile from re-prompting — the URL opens cleanly with no double-prompt.
+Links inside Chrome are not affected: Chrome handles those itself as usual.
 
-### Managing Saved Mappings
+### Managing Saved Rules
 
-Click the **Settings** link on the confirmation page (or navigate to the extension's settings page) to view and manage all saved mappings. Each mapping shows a **Domain** or **URL** type badge so you can tell them apart. URL path mappings take priority over domain mappings when both match.
+Open **Profile Router** from `~/Applications` (or Spotlight). It shows whether it is your default browser, and **Manage Rules…** lists every rule. Select rules and click **Remove** to delete them.
+
+Rules are stored in `~/Library/Application Support/Chrome Profile Router/rules.json`:
+
+```json
+{
+  "domains" : {
+    "slack.com" : "Profile 1"
+  },
+  "paths" : {
+    "github.com/org-a" : "Default"
+  }
+}
+```
+
+- Values are Chrome profile **directory** names (`Default`, `Profile 1`, …), not display names.
+- Domain rules match the exact host (`slack.com` does not match `app.slack.com`).
+- Path rules match the prefix itself and anything below it (`github.com/org-a` matches `github.com/org-a/repo`, but not `github.com/org-ab`). Matching is case-sensitive.
+- The longest matching path rule wins; path rules take priority over domain rules.
+- If a rule points to a profile that no longer exists, the picker is shown instead.
 
 ## How It Works
 
-1. The Chrome extension listens for `chrome.webNavigation.onCommitted` events with a `transitionType` of `start_page` — Chrome's signal for navigations that start a tab from outside the browser (Mail, Slack, terminal, etc.)
-2. When detected, the extension checks for a matching URL path prefix mapping first, then falls back to a domain mapping
-3. If a match is found: the link opens automatically in the saved profile (via the native host) and the tab closes
-4. If no match: the confirmation page appears with a list of available Chrome profiles
-5. The native messaging host (Python script) reads Chrome's `Local State` file to discover profiles, and uses the macOS `open` command to launch URLs in specific profiles
-6. To prevent double-prompts, a `#__prouted` fragment marker is appended to the URL before sending it to the target profile; the extension in that profile detects and strips the marker
+1. `install.sh` compiles `app/ProfileRouter.applescript` with `osacompile`, declares the `http`/`https` URL schemes in the app's `Info.plist` (which is what makes macOS offer it as a default browser), hides its Dock icon (`LSUIElement`), re-signs it ad hoc, and registers it with Launch Services.
+2. With Profile Router as the default browser, macOS delivers each clicked link to the app's `open location` handler.
+3. The app reads Chrome's profile list from `~/Library/Application Support/Google/Chrome/Local State` (`profile.info_cache`).
+4. If a saved rule matches, the link opens straight away; otherwise a macOS picker (`NSAlert`) is shown.
+5. The link is opened with `open -na "Google Chrome" --args --profile-directory="<dir>" <url>`.
 
 ## Project Structure
 
 ```
 chrome-profile-router/
-├── extension/
-│   ├── manifest.json          # Manifest V3 extension config
-│   ├── background.js          # Service worker — detection + native messaging
-│   ├── confirmation.html/js   # Profile picker UI
-│   ├── settings.html/js       # Manage remembered domains and URL paths
-│   ├── styles.css             # Shared dark mode styles
-│   └── icons/                 # Extension icons
-├── native-host/
-│   ├── profile_router_host.py          # Native messaging host (Python 3)
-│   └── com.profile_router.host.json    # Manifest template
-├── install.sh                 # Installation script
+├── app/
+│   ├── ProfileRouter.applescript   # The whole app: routing, picker, rules
+│   └── icon.png                    # App icon (converted to .icns at install)
+├── install.sh                      # Build + install into ~/Applications
+├── uninstall.sh                    # Remove the app (and optionally rules)
 └── README.md
 ```
 
 ## Troubleshooting
 
-- **"Failed to load profiles"** — Run `install.sh` again and make sure you used the correct extension ID. Restart Chrome after installing.
-- **Links not being intercepted** — Make sure Chrome is set as your default browser. The extension only intercepts navigations with `transitionType: "start_page"` (external-app launches); middle-clicks and in-Chrome link clicks are intentionally ignored.
-- **Native host errors** — Check Chrome's extension error log at `chrome://extensions` (click "Errors" on the extension card).
-- **Current profile not showing** — The "Current" badge requires the profile to be signed into a Google account. Profiles not signed in will not show the indicator.
+- **Links still open straight in Chrome**: Profile Router isn't the default browser. Open the app and click **Set Default Browser…**.
+- **Profile Router is missing from the Default web browser list**: run `./install.sh` again. It must live outside temporary folders (the installer uses `~/Applications`).
+- **"Couldn't read your Chrome profiles"**: Chrome hasn't been run on this Mac yet, or it's installed under a different name. Launch Chrome once and retry.
+- **A link keeps going to the wrong profile**: a saved rule matches it. Open the app → **Manage Rules…** and remove it.
 
 ## License
 
