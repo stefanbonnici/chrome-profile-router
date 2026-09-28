@@ -24,6 +24,13 @@ on open location theURL
 	routeURL(theURL)
 end open location
 
+-- As default browser the app also receives HTML files opened from Finder.
+on open theFiles
+	repeat with f in theFiles
+		routeURL((current application's NSURL's fileURLWithPath:(POSIX path of f))'s absoluteString() as text)
+	end repeat
+end open
+
 -- Routing -------------------------------------------------------------------
 
 on routeURL(theURL)

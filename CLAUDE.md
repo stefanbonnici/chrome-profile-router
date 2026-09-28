@@ -10,13 +10,14 @@ A macOS AppleScript app that registers as the default web browser. Links opened 
 
 **App (`app/ProfileRouter.applescript`)**: the whole app, AppleScript + AppleScriptObjC (Foundation/AppKit):
 - `on open location`: entry point for every http/https link → `routeURL`.
+- `on open`: HTML files opened from Finder (the default browser also owns `.html`) → `routeURL` with a `file://` URL.
 - `on run`: launched directly → home screen (default-browser status, manage rules).
 - `chromeProfiles()`: parses `~/Library/Application Support/Google/Chrome/Local State` → `profile.info_cache`, sorted by name.
 - `showPicker()`: `NSAlert` with one button per profile (key equivalents 1–9, Escape = Cancel) and an `NSPopUpButton` accessory for "Always for <host>" / "Always for <host/path>/…".
 - Rules: JSON at `~/Library/Application Support/Chrome Profile Router/rules.json` with `domains` (exact host) and `paths` (prefix, longest match wins, beats domains).
 - Opening: `open -na "Google Chrome" --args --profile-directory=<dir> <url>`.
 
-**Install (`install.sh`)**: `osacompile` → patch `Info.plist` via PlistBuddy (`CFBundleIdentifier` `com.profilerouter.app`, `CFBundleURLTypes` http/https, `LSUIElement`) → icon → ad-hoc `codesign` → `~/Applications/Profile Router.app` → `lsregister`.
+**Install (`install.sh`)**: `osacompile` → patch `Info.plist` via PlistBuddy (`CFBundleIdentifier` `com.profilerouter.app`, `CFBundleURLTypes` http/https, `CFBundleDocumentTypes` public.html/xhtml — System Settings only lists browsers that declare both, `LSUIElement`) → icon → ad-hoc `codesign` → `~/Applications/Profile Router.app` → `lsregister`.
 
 **Uninstall (`uninstall.sh`)**: removes the app; `--purge` also removes rules.
 

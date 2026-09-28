@@ -50,6 +50,16 @@ echo "[OK] Compiled app"
 "$PLISTBUDDY" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
 "$PLISTBUDDY" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string http" "$PLIST"
 "$PLISTBUDDY" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:1 string https" "$PLIST"
+# System Settings only lists apps that also open HTML files as browsers.
+"$PLISTBUDDY" -c "Delete :CFBundleDocumentTypes" "$PLIST" 2>/dev/null || true
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes array" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0 dict" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0:CFBundleTypeName string HTML document" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0:CFBundleTypeRole string Viewer" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0:LSHandlerRank string Default" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes array" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes:0 string public.html" "$PLIST"
+"$PLISTBUDDY" -c "Add :CFBundleDocumentTypes:0:LSItemContentTypes:1 string public.xhtml" "$PLIST"
 
 ICON_SRC="$SCRIPT_DIR/app/icon.png"
 if [ -f "$ICON_SRC" ]; then

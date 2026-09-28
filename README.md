@@ -56,7 +56,7 @@ Then choose a new default web browser (e.g. Google Chrome) in System Settings. T
 3. Click a profile or press its number (1–9). Press Escape to cancel; the link then goes nowhere.
 4. Optionally choose an **Always for …** option in the dropdown first to remember the choice.
 
-Links inside Chrome are not affected: Chrome handles those itself as usual.
+Links inside Chrome are not affected: Chrome handles those itself as usual. HTML files opened from Finder also go through the picker, since the default browser opens those too.
 
 ### Managing Saved Rules
 
@@ -83,7 +83,7 @@ Rules are stored in `~/Library/Application Support/Chrome Profile Router/rules.j
 
 ## How It Works
 
-1. `install.sh` compiles `app/ProfileRouter.applescript` with `osacompile`, declares the `http`/`https` URL schemes in the app's `Info.plist` (which is what makes macOS offer it as a default browser), hides its Dock icon (`LSUIElement`), re-signs it ad hoc, and registers it with Launch Services.
+1. `install.sh` compiles `app/ProfileRouter.applescript` with `osacompile`, declares the `http`/`https` URL schemes and HTML documents in the app's `Info.plist` (both are needed for macOS to list it as a default browser), hides its Dock icon (`LSUIElement`), re-signs it ad hoc, and registers it with Launch Services.
 2. With Profile Router as the default browser, macOS delivers each clicked link to the app's `open location` handler.
 3. The app reads Chrome's profile list from `~/Library/Application Support/Google/Chrome/Local State` (`profile.info_cache`).
 4. If a saved rule matches, the link opens straight away; otherwise a macOS picker (`NSAlert`) is shown.
